@@ -7,6 +7,8 @@
 
 import SwiftUI
 import CoreData
+import UIKit
+
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -15,6 +17,10 @@ struct ContentView: View {
         sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
         animation: .default)
     private var items: FetchedResults<Item>
+
+
+    @State private var selectedImage: UIImage? = nil
+    @State private var isShowingImagePicker = false
 
     var body: some View {
         NavigationView {
@@ -39,6 +45,14 @@ struct ContentView: View {
                         Label("Add Item", systemImage: "plus")
                     }
                 }
+                ToolbarItem {
+                    Button("画像を選択する") {
+                        isShowingImagePicker = true
+                    }
+                }
+
+            }.sheet(isPresented: $isShowingImagePicker) {
+                ImagePicker(selectedImage: $selectedImage)
             }
             Text("Select an item")
         }
@@ -88,3 +102,46 @@ struct ContentView_Previews: PreviewProvider {
         ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
     }
 }
+
+
+
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var selectedImage: UIImage?
+    @Environment(\.presentationMode) var presentationMode
+
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        @Binding var selectedImage: UIImage?
+        @Binding var presentationMode: PresentationMode
+
+        init(selectedImage: Binding<UIImage?>, presentationMode: Binding<PresentationMode>) {
+            _selectedImage = selectedImage
+            _presentationMode = presentationMode
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let selectedImage = info[.originalImage] as? UIImage {
+                self.selectedImage = selectedImage
+            }
+            presentationMode.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            presentationMode.dismiss()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(selectedImage: $selectedImage, presentationMode: presentationMode)
+    }
+
+    func makeUIViewController(context: UIViewControllerRepresentableContext<ImagePicker>) -> UIImagePickerController {
+        let imagePicker = UIImagePickerController()
+        imagePicker.delegate = context.coordinator
+        return imagePicker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: UIViewControllerRepresentableContext<ImagePicker>) {
+        // Nothing to update here
+    }
+}
+
